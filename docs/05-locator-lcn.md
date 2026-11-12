@@ -33,8 +33,10 @@ resolve(locator, table) -> lcn:
 Rules observed in practice:
 
 - **Exact match on `locator`.** No ranges, no wildcards.
-- **Miss → default.** An unknown locator resolves to a **default channel number of
-  `1`** rather than being hidden. A receiver should treat "not found" as a soft
+- **Miss → default.** An unknown locator has been observed to resolve to a
+  **default channel number of `1`** rather than being hidden. *Evidence status:
+  seen in one implementation and not confirmed across receivers.* See §5.5 for a
+  safer handling. A receiver should treat "not found" as a soft
   fallback, not an error that drops the service.
 - **Last writer wins.** If the broadcast carries two mappings for the same
   locator within one update, the later entry is the effective one.
@@ -65,5 +67,21 @@ service database (the services it has actually found by scanning). The locator t
 a *broadcast intent* ("this logical channel") to a *tuned service* ("this
 service_id on this transport"), and the operating mode ([§6](06-operating-modes.md))
 decides how strictly that intent overrides any local user edits.
+
+## 5.5 Edge cases (receiver guidance)
+
+The broadcast semantics for these cases are **not confirmed**
+([§9](09-open-questions.md)). The guidance below is non-normative. It describes
+robust receiver behaviour that does not depend on the answer.
+
+| Case | Guidance |
+|------|----------|
+| **LCN range** | The field is 13 bits, so values are `0`–`8191`. Treat this as the whole valid range unless captures show a narrower one. |
+| **LCN `0`** | Do not show a service at channel 0. Treat it like a miss: the service is "unnumbered". |
+| **Locator miss** | Do not stack unmapped services on channel 1, which would hide the real channel 1 or make it ambiguous. Place them after the highest assigned LCN, in scan order, and mark them as not operator-numbered. |
+| **Duplicate locator** | Last writer wins (§5.2). |
+| **Duplicate LCN** (two locators → same number) | Keep the first one at the number and move the next to the first free LCN after the highest assigned one. Never drop a service silently. |
+| **Mapping with no matching scanned service** | Keep the mapping. The service may appear after a scan or a transponder change. Do not create a placeholder channel. |
+| **Scanned service with no mapping** | Same as *locator miss*. In **Fixed** mode the receiver may instead hide it (§6). |
 
 Continue to [§6 Operating modes](06-operating-modes.md).

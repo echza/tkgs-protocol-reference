@@ -54,4 +54,17 @@ Independent of mode, TKGS can carry:
 
 How strictly these override local state again depends on the operating mode.
 
+## 6.5 Where the mode comes from
+
+In practice the mode is a **receiver menu setting** (TKGS: *Kapalı / Sabit /
+Esnek*). Whether the broadcast can **force** or **default** a mode, for example
+with a flag that requires Fixed or that sets the initial mode on first
+installation, is **unconfirmed** ([§9](09-open-questions.md)). Until a capture
+shows such a field, implementations should:
+
+- treat the mode as receiver-local, persisted user state;
+- default to **Fixed** on first installation, which matches what consumers expect
+  from TKGS receivers *(convention, not a protocol rule)*;
+- never change the mode as a side effect of an update.
+
 Continue to [§7 Versioning & update](07-version-update.md).

@@ -63,9 +63,29 @@ for each block:
 if none matched: use the remembered default block
 ```
 
-A common fallback language on TÜRKSAT is Turkish (`"TUR"` / `"tur"`). Name text
+Compare language codes **case-insensitively**: both `"TUR"` and `"tur"` are
+seen. A common fallback language on TÜRKSAT is Turkish. Name text
 length is bounded in practice (service names are short); receivers should treat
 an over-long `text_length` defensively and truncate.
+
+### 4.3.1 Text encoding
+
+How the `text` bytes are encoded is **not confirmed** for the TKGS private
+descriptors ([§9](09-open-questions.md)). The DVB convention (EN 300 468
+Annex A) is the working assumption:
+
+| First byte | Meaning |
+|------------|---------|
+| `0x20`–`0xFF` | No prefix; default table (ISO/IEC 6937 Latin) |
+| `0x05` | ISO/IEC 8859-9 (Latin-5, Turkish) follows |
+| `0x10 0x00 0x09` | ISO/IEC 8859-9 via the three-byte form |
+| `0x15` | UTF-8 follows |
+| other `0x01`–`0x1F` | Other tables per EN 300 468 Annex A |
+
+A defensive decoder should honour the Annex A prefix when it is present. Without
+a prefix, it should try ISO/IEC 8859-9 before ISO/IEC 6937, because Turkish
+letters (`ğ ş ı İ`) are common on this platform and render incorrectly when
+decoded as 6937. Record which form you see in captures.
 
 ## 4.4 Locator descriptor (0x94)
 
@@ -112,5 +132,41 @@ len20 = (b[0] & 0x0F) << 16 | (b[1] << 8) | b[2]
 A parser advances by each region's length to reach the next, exactly as it does
 for `section_length`. This is what allows the service list, the per-service
 descriptor loop, and the category block to be delimited inside one section.
+
+## 4.6 Worked example (synthetic)
+
+> **These bytes are synthetic.** They were built to match the layouts above and
+> to give implementers a test vector. They are **not** an on-air capture. The
+> reference decoder in [`tools/tkgs_decode.py`](../tools/tkgs_decode.py)
+> checks them in its self-test.
+
+A per-service descriptor loop with one locator descriptor (two mappings) and
+one bilingual service-name descriptor:
+
+```text
+94 08 00 2A E0 07 01 F4 E0 64
+93 11 54 55 52 05 48 61 62 65 72 45 4E 47 04 4E 65 77 73
+```
+
+| Bytes | Field | Value |
+|-------|-------|-------|
+| `94` | tag | locator descriptor |
+| `08` | len | 8 bytes, i.e. two 4-byte mappings |
+| `00 2A` | locator | `0x002A` |
+| `E0 07` | reserved `111` + LCN | LCN `7` |
+| `01 F4` | locator | `0x01F4` |
+| `E0 64` | reserved `111` + LCN | LCN `100` |
+| `93` | tag | service-name descriptor |
+| `11` | len | 17 bytes |
+| `54 55 52` | language | `"TUR"` |
+| `05` | text_length | 5 |
+| `48 61 62 65 72` | text | `"Haber"` |
+| `45 4E 47` | language | `"ENG"` |
+| `04` | text_length | 4 |
+| `4E 65 77 73` | text | `"News"` |
+
+Decoded: `{0x002A → 7, 0x01F4 → 100}`. The name is `"Haber"` when the OSD
+language is Turkish and `"News"` when it is English. Note that the reserved bits
+are set to `1` (`0xE0` mask) and are ignored when the LCN is decoded.
 
 Continue to [§5 Locator → LCN](05-locator-lcn.md).

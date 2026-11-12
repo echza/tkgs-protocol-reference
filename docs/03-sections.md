@@ -57,4 +57,32 @@ The usable payload ends **4 bytes before** the end of the section; those last
 earlier to exclude the CRC. A failed CRC means the section is dropped and
 re-acquired on the next cycle.
 
+## 3.4 Sub-tables
+
+The unit of completeness in §3.2 is a **sub-table**, not the whole PID. Per
+ISO/IEC 13818-1, a sub-table is identified by:
+
+```text
+(table_id, table_id_extension, version_number, current_next_indicator)
+```
+
+For the SDT, `table_id_extension` is the `transport_stream_id`. `0x46` (other)
+therefore carries **one sub-table per other transport stream**, each with its
+own section numbering and `last_section_number`. A receiver keeps a separate
+section bitmap per `(table_id, table_id_extension)` key. "SDT complete" means
+every expected sub-table is complete. It does not mean "some set of sections
+reached `last_section_number`".
+
+Implementation notes:
+
+- Ignore sections with `current_next_indicator = 0`. They describe the *next*
+  version and must not be mixed into the current one.
+- How the receiver knows which `0x46` sub-tables to expect is
+  implementation-defined. A common approach is to take the transport streams
+  listed in the NIT, or to wait one full carousel cycle (§2.6) with no new
+  `table_id_extension` values arriving.
+- The sub-table structure of the data on PID `0x1FF5` is **unconfirmed**
+  ([§9](09-open-questions.md)). Apply these rules to it only once a capture
+  shows it uses the long-form section syntax.
+
 Continue to [§4 Descriptors](04-descriptors.md).
