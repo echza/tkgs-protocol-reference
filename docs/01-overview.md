@@ -43,7 +43,8 @@ flowchart TD
 Key consequences of the broadcast-only model:
 
 - **Idempotence.** Because the table repeats on a carousel, a receiver may see it
-  many times. A monotonic **version** lets it act once and ignore repeats
+  many times. A **version** value that changes with every update lets it act once
+  and ignore repeats
   (see [§7](07-version-update.md)).
 - **Completeness before action.** A table may be split across several sections.
   A receiver must collect *all* of them before it can safely apply anything

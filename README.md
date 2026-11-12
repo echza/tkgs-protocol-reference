@@ -21,21 +21,24 @@ operator signals the same way.
 | # | Section | What it covers |
 |---|---------|----------------|
 | 1 | [Overview](docs/01-overview.md) | Model, goals, terminology, data-flow diagram |
-| 2 | [Transport](docs/02-transport.md) | Where TKGS rides: PID, tables, the broadcast carousel |
+| 2 | [Transport](docs/02-transport.md) | Where TKGS rides: home transponders (12380 V / 12423 H @ 42°E), PID `0x1FF5` (8181), tables, carousel |
 | 3 | [Sections](docs/03-sections.md) | Section format, reassembly, CRC, completeness |
 | 4 | [Descriptors](docs/04-descriptors.md) | Private descriptor tags and their byte layouts |
 | 5 | [Locator → LCN](docs/05-locator-lcn.md) | How a service resolves to a channel number |
 | 6 | [Operating modes](docs/06-operating-modes.md) | Off / Fixed / Customizable semantics |
 | 7 | [Versioning & update](docs/07-version-update.md) | Version compare, apply rules, OTA signalling |
 | 8 | [Glossary](docs/08-glossary.md) | Abbreviations and terms |
+| 9 | [Open questions](docs/09-open-questions.md) | What is unconfirmed, and what evidence would settle it |
+
+**Document version:** 0.2 (2026-11-12) — see [`CHANGELOG.md`](CHANGELOG.md).
 
 ## Quick picture
 
 ```mermaid
 flowchart LR
   A["Operator head-end"] -->|"inserts TKGS tables"| B["DVB transport stream"]
-  B -->|"broadcast carousel"| C["Receiver tuner + demux"]
-  C -->|"filter SDT PID 0x0011"| D["Section reassembly"]
+  B -->|"broadcast carousel"| C["Receiver tuned to home TP<br/>(12380 V / 12423 H @ 42°E)"]
+  C -->|"filter TKGS PID 0x1FF5 (8181)<br/>+ SDT PID 0x0011"| D["Section reassembly"]
   D -->|"complete table"| E["Version check"]
   E -->|"newer"| F["Parse descriptors"]
   E -->|"same"| Z["Stop — no change"]
@@ -51,6 +54,14 @@ Each section is self-contained Markdown and renders directly on GitHub. Diagrams
 use [Mermaid](https://mermaid.js.org/), which GitHub renders natively. To publish
 as a site, enable **Settings → Pages → Deploy from branch → `main` / root**; no
 build toolchain is required.
+
+## Reference decoder
+
+[`tools/tkgs_decode.py`](tools/tkgs_decode.py) is a dependency-free Python
+implementation of the layouts in §3–§5: descriptor-loop walking, `0x94` locator
+decoding, multilingual name selection, 12/20-bit lengths and MPEG-2 CRC-32. Run
+`python3 tools/tkgs_decode.py` to run its self-test against the test vectors in
+§4.6.
 
 ## Contributing
 
